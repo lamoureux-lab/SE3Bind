@@ -39,27 +39,27 @@ pip install mrcfile
 
 ```
 AntibodyDocking/
-├── src/                          # Source code
+├── src/                         # Source code
 │   ├── train_BS_T0.py           # Task 0 (Re-Docking) training
-│   ├── train_DC_T1.py           # Task 1 (Binding affinity Joint training model) training
-│   ├── TrainerT0.py             #  Re-docking model trainer class
-│   ├── TrainerT1.py             # Binding affinity Joint training model trainer class
+│   ├── train_DC_T1.py           # Task 1 (Binding affinity) training
+│   ├── TrainerT0.py             # Re-docking model trainer class
+│   ├── TrainerT1.py             # Binding affinity model trainer class
 │   ├── TrainerWrapper.py        # Wrapper for both trainers
 │   ├── TorchDockingFFT.py       # FFT-based docking
 │   ├── ProcessCoords.py         # Coordinate processing
 │   ├── Rotations.py             # Rotation handling
 │   ├── UtilityFunctions.py      # Utility functions
 │   ├── PlotterT0.py             # Task 0 (Re-Docking) visualization
-│   ├── PlotterT1.py             # Task 1 (Binding affinity Joint training model) visualization
-│   ├── configT0.txt             # Task 0 (Re-Docking) model only configuration
-│   └── configT1.txt             # Task 1 (Binding affinity Joint training model)l configuration
-├── models/                       # Model architectures
+│   ├── PlotterT1.py             # Task 1 (Binding affinity) visualization
+│   ├── configT0.txt             # Task 0 (Re-Docking) configuration
+│   └── configT1.txt             # Task 1 (Binding affinity) configuration
+├── models/                      # Model architectures
 │   ├── model_sampling.py        # Sampling model
 │   ├── model_docking.py         # Docking model
 │   └── model_interaction.py     # Interaction/affinity model
-├── data/                         # Dataset scripts and data
-├── Figs/                         # Output visualizations
-└── Log/                          # Training logs and saved models
+├── data/                        # Dataset scripts and data
+├── Figs/                        # Output visualizations
+└── Log/                         # Training logs and saved models
 ```
 
 ---
@@ -76,7 +76,7 @@ Create a CSV file (e.g., `mappings_example.csv`) with your PDB files and chain m
 filename,antibody_chains,antigen_chains
 5mev.pdb,H;L,A
 3iu3.pdb,A;B,K
-1s78.pdb,H;L,A,B
+1s78.pdb,H;L,A;B
 ```
 
 - **filename**: Name of your PDB file
@@ -151,9 +151,6 @@ python train_DC_T1.py --mode evaluate --config inference_config.txt \
 ```
 
 The predictions will be saved in `Log/losses/<experiment_name>/` with binding affinity (ΔG) predictions.
-
-See [data/README_Inference.md](data/README_Inference.md) for detailed documentation on the inference dataset generation process.
-
 ---
 
 ### Training Models

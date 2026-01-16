@@ -22,14 +22,12 @@ se3cnn/
 /ISOI_and_SOI_code+examples/
 /Figs/so3_volume_animation100.html
 /temp_plot_BFrmsd.py
-/src/Figs
-/src/Log
+
 ##saved_angular_grids/
 # No tensorboard events
 *events.out.tfevents*
 
 #Pytorch
-*.th
 *.pkl
 *.mp4
 *.png

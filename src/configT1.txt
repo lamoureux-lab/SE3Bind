@@ -16,7 +16,7 @@
 #####################################################################
 
 ## RefModel 4L3s2v 
-pretrain_experiment = SE3Dock_refModel_4L3s2v_ablation_DCcent_box75_res2_200ep_ZeroFeat_asign
+pretrain_experiment = SE3Dock
 pretrain_epoch_loaded = 200
 
 targetset = None
@@ -27,7 +27,6 @@ valid_max_size=1000
 
 # Docked complex box 75 res 2, pretrained IP DCcentered
 trainset = ../data/datasets/DCcenter_hmc1_box75_res2_md150_443filtered_sigma1_443ex_trainset.pkl
-testset = ../data/datasets/DCcenter_hmc1_box75_res2_md150_443filtered_sigma1_13ex_testset.pkl
 
 ### Crystal Structures corrected uniref50 clusters dataset
 validset = ../data/datasets/corrected_BM_sabdab_combined_DC_box75_res2_15ex_validset.pkl
@@ -37,10 +36,8 @@ validset = ../data/datasets/corrected_BM_sabdab_combined_DC_box75_res2_15ex_vali
 
 
 ##################### SE3Bind Experiments ##################
-## Experiment 29, repeat of 28; w/correctly applied a_coef 4Layer, 3s2v w/zero Feature
-## Model name: SE3Bind ($F_0 <>= 0$); lr 0.01
 ## SE3BIND Final model, epoch 1000
-##experiment = SE3Bind_exp29_B_JT_zeroFeatL1_wReg3sum_convZerofeat_plr4_ilr2_refModel_4L3s2v_200ep_asign
+experiment = SE3Bind
 
 
 ############### Training conditions ###############

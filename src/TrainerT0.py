@@ -107,11 +107,9 @@ class TrainerT0:
         for key in atom_keys:
             rmsd_list.append(
                 (((groundtruth_coords_antigen[key] - predicted_coords_antigen[key]) ** 2).mean() ** 0.5).mean())
-            # print(len(rmsd_dict[key].index))
             lengths.append(len(groundtruth_coords_antigen[key].index))
 
         rmsd_arr = np.array(rmsd_list)
-        # # print(lengths)
 
         RMSD = rmsd_arr.mean()
 
@@ -278,7 +276,6 @@ class TrainerT0:
         :param epoch: epoch count used in plotting
         :return: `loss` and `rmsd`
         """
-        # loss = torch.zeros(1).to(device=self.device, dtype=self.dtype)
 
         if self.docked_complex:
             receptor, ligand, \
@@ -317,7 +314,6 @@ class TrainerT0:
             energy_grid, pred_rotation_4x4, pred_txyz, rec_feat, lig_feat,  = self.sampling_model(receptor, ligand,
                                                                                                 angle=gt_rot_4x4,
                                                                                                 )
-        # deltaF = self.interaction_model(energy_grid=energy_grid)
         ## translation vector only RMSD
         gt_txyz_mod = gt_txyz_3x1.clone()
         pred_txyz_mod = pred_txyz.clone()
@@ -338,14 +334,6 @@ class TrainerT0:
 
         ## Model plotting during final epoch evaluation or target structure checking
         if not training and epoch == self.num_epochs - 1 or self.target_checking:
-            # BF_eval = False
-            # if BF_eval:
-            #     print('Performing Brute Force evaluation using axis permuted so3 angular grid')
-            #     energy_grid, pred_rotation_4x4, pred_txyz, rec_feat, lig_feat = self.sampling_model(receptor,
-            #                                                                                         ligand,
-            #                                                                                         angle=None,
-            #                                                                                         )
-
             rmsd_out = self.coord_rmsd(dict_AB_coord_dfs, dict_AG_coord_dfs,
                                        pred_rotation_4x4, pred_txyz,
                                        gt_rot_4x4=gt_rot_4x4, gt_txyz_4x4=gt_txyz_4x4,
@@ -462,9 +450,6 @@ class TrainerT0:
             save_html_path = save_folder + '/' + \
                              'ABcoords_epoch' + str(epoch) + '_ex' + str(pos_idx) + "_rmsd" + str(rmsd_out)[
                                                                                               :4] + self.experiment + ".html"
-
-        # if self.target_checking:
-
         fig.write_html(save_html_path)
 
         return rmsd_out
@@ -500,8 +485,6 @@ class TrainerT0:
                                                                                                                    :4] + \
                          self.experiment.split('exp')[0] + ".html"
 
-        # if self.target_checking:
-
         correlation_energy.write_html(save_html_path)
 
         import mrcfile
@@ -525,12 +508,7 @@ class TrainerT0:
                              lig_feat,
                              epoch, pos_idx, rmsd_out,
                              show_plot=False):
-
-        # percent_max_plotted = 0.5
-        # min_plot_pred = int(torch.max(feature_stack[feature_index, :, :, :]) * percent_max_plotted)
-        # pred_feat_isomin, target_isomin, rec_bulk_stack_isomin = min_plot_pred, 0.01, 0.02
-        # lig_bulk_stack_isomin = target_isomin
-
+        
         feature_volume_plot = self.P.plot_complex_volume(
             list_of_volumes=
             [
@@ -578,11 +556,6 @@ class TrainerT0:
                            epoch, pos_idx, rmsd_out,
                            show_plot=False):
 
-        # percent_max_plotted = 0.5
-        # min_plot_pred = int(torch.max(feature_stack[feature_index, :, :, :]) * percent_max_plotted)
-        # pred_feat_isomin, target_isomin, rec_bulk_stack_isomin = min_plot_pred, 0.01, 0.02
-        # lig_bulk_stack_isomin = target_isomin
-
         receptor_input_volume = torch.sum(receptor.squeeze(), dim=0).detach().cpu()
         ligand_input_volume = torch.sum(ligand.squeeze(), dim=0).detach().cpu()
         input_volume_plot = self.P.plot_complex_volume(
@@ -617,7 +590,6 @@ class TrainerT0:
         )
         save_folder = 'Figs/Input_volumes/' + self.experiment
         os.makedirs(save_folder, exist_ok=True)
-        # print(self.cofactor_type, str(self.cofactor_type))
         save_html_path = save_folder + '/' + \
                          'epoch' + str(epoch) \
                          + '_RLvolumes' \
@@ -648,10 +620,6 @@ class TrainerT0:
                              # docked_complex_feat,
                              epoch, pos_idx, rmsd_out,
                              show_plot=False):
-
-        # padded_dim = 100
-        # rec_feat, lig_feat = self.dockingFFT.pad_feats(rec_feat, lig_feat, padded_dim_explicit=padded_dim)
-
         rec_feat = rec_feat.squeeze()
         lig_feat = lig_feat.squeeze()
         rec_zero_feat = rec_feat[0, :, :, :]
@@ -669,11 +637,6 @@ class TrainerT0:
         lig_vector2 = lig_feat[6:, :, :, :]
         lig_vector1_modulus_feat = torch.norm(lig_vector1, dim=0)
         lig_vector2_modulus_feat = torch.norm(lig_vector2, dim=0)
-
-        # origin_value = (padded_dim // 2)
-        # tolerance = 1e-1
-        # vector1_modulus_feat[(vector1_modulus_feat >= -tolerance) & (vector1_modulus_feat <= tolerance)] -= origin_value
-        # origin_vector = torch.ones(vector1_modulus_feat) * (padded_dim // 2)
 
         geo_feature_volume_plot = self.P.plot_complex_volume(
             list_of_volumes=
@@ -723,7 +686,6 @@ class TrainerT0:
         )
         save_folder = 'Figs/Feature_volumes/' + self.experiment
         os.makedirs(save_folder, exist_ok=True)
-        # print(self.cofactor_type, str(self.cofactor_type))
         save_html_path = save_folder + '/' + \
                          'epoch' + str(epoch) \
                          + '_geoFeats' \
@@ -831,8 +793,6 @@ class TrainerT0:
                     fout.write('IP Testing Loss:\n')
                     fout.write(self.log_header)
 
-            # start_epoch = resume_epoch + 1
-            # start_epoch = resume_epoch
             start_epoch = 0
 
         return start_epoch

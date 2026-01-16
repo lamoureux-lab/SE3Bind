@@ -1,0 +1,58 @@
+########### Config file read by train_DC_T1.py
+## Inference (Evaluation) mode config file, arguments overwritten by CLI interface, or using run_inference.sh
+## Inference run using user provided dataset, using SE3Bind model.
+## Only uncommented lines with assignments are read.
+## Do not add comments after lines that assign arguments.
+
+#####################################################################
+# training_case = A
+# CaseA: train with docking model frozen
+# training_case = B
+# CaseB: train with docking model unfrozen
+# training_case = C
+# CaseC: train with docking model CNN frozen and scoring ("a") coeffs unfrozen
+# training_case = scratch # also called expD
+# Case scratch: train everything from scratch
+#####################################################################
+
+
+## Inference dataset paths
+testset = User_provided_dataset_path
+
+train_max_size = 10000
+test_max_size = 1000
+valid_max_size=1000
+
+
+############### Training conditions ###############
+training_case = B
+
+evaluate_model = True
+resume_epoch = 1000         
+train_epochs = 1000 
+
+############### Do not change ###############
+## SE3Bind Re-docking pretrain model: 4L3s2v opposite a_coef
+pretrain_experiment = SE3Dock_refModel_4L3s2v_ablation_DCcent_box75_res2_200ep_ZeroFeat_asign
+pretrain_epoch_loaded = 200
+
+experiment = SE3Bind_exp29_B_JT_zeroFeatL1_wReg3sum_convZerofeat_plr4_ilr2_refModel_4L3s2v_200ep_asign
+
+joint_training = True
+docked_complex = True
+zero_feature = True
+inference = True
+
+resolution_in_angstroms = 2.0
+box_dim = 75
+padded_dim = 150
+eval_freq = 10
+
+
+learning_rate = 0.01
+interaction_learning_rate = 0.01
+
+train_model = False
+resume_training = False
+
+############### Do not change ###############

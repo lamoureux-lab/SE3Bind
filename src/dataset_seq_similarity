@@ -1,0 +1,518 @@
+import os
+import re
+import pandas as pd 
+import numpy as np
+import seaborn as sns
+import matplotlib as mpl
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from sklearn.manifold import MDS
+from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.spatial.distance import squareform
+
+from Bio import Align
+
+
+def gather_dataset_ids(data):
+    data = pd.read_csv(data, sep=",")
+    dataset_ids_dict = dict(zip(data["PDB_ID"].str.lower(), data["Antibody_chains"].str.lower()))
+
+    return dataset_ids_dict
+
+
+def parse_Antibody_fasta(fasta_file, train_ids_dict, valid_ids_dict, save_path, save=False ):
+    """reads fasta file from rcsbs and parses it to keep only the antibody chains and saves a new fasta file"""
+
+    ids_not_found = []
+    with open(fasta_file, 'r') as file:
+        for line in file:
+            if line.startswith('>'):
+                pdb_id = line[1:].strip().split('|')[0].lower()  # Extract PDB ID
+
+                chains = line[1:].strip().split('|')[1].split(" ") #[1].lower()  # Extract chain ID
+                if len(chains)>1:
+                    chain_id = chains[1:]
+                    chain_id_str = ' '.join(chain_id)
+                    chain_id = ''.join(re.findall(r'\b([A-Za-z])\b', chain_id_str)).lower()
+
+                # if pdb_id[:-2]=='5mev':
+                    train_match = pdb_id[:-2] in train_ids_dict and any(c in train_ids_dict[pdb_id[:-2]] for c in chain_id)
+                    valid_match = pdb_id[:-2] in valid_ids_dict and any(c in valid_ids_dict[pdb_id[:-2]] for c in chain_id)
+                    if train_match or valid_match:
+                        print("chain_id", pdb_id, chain_id, "train", train_ids_dict.get(pdb_id[:-2], "N/A"))
+                        print("chain_id", pdb_id, chain_id, "valid", valid_ids_dict.get(pdb_id[:-2], "N/A"))
+                    
+                        header = line
+                        sequence = next(file)
+    
+                        if save:
+                            save_name = os.path.join(save_path, "train_valid_antibody_only.fasta")
+
+                            with open(save_name, "a") as out_f:
+                                out_f.write(header)
+                                out_f.write(sequence)
+
+            else:
+                ids_not_found.append([pdb_id, chain_id])
+                continue
+
+    print("IDs not found in train or valid set:", ids_not_found, len(ids_not_found))
+
+def read_identity_matrix(file_path):
+    row_names = []
+    data = []
+
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            seq_name = parts[1]
+            values = list(map(float, parts[2:]))
+            row_names.append(seq_name)
+            data.append(values)
+
+    n = len(row_names)
+    for i, row in enumerate(data):
+        if len(row) != n:
+            raise ValueError(f"Row {i} length {len(row)} != {n}")
+
+    df = pd.DataFrame(data, index=row_names, columns=row_names)
+    return df
+
+def pdb_id_from_seqname(seqname):
+    # Extract PDB id, e.g., '3eo1|Heavy|' -> '3eo1' (lowercase)
+    return seqname.split('|')[0].lower()
+
+
+def get_category(id1, id2, train_ids, valid_ids):
+    in_train = (id1 in train_ids) and (id2 in train_ids)
+    in_valid = (id1 in valid_ids) and (id2 in valid_ids)
+    if in_train:
+        return 'train'
+    elif in_valid:
+        return 'valid'
+
+
+def split_identity_matrices(df, train_ids, valid_ids, cdr_only=False, whole_fasta=False):
+    """
+    Splits a full percent identity matrix into submatrices for train, valid, and train-vs-valid sets.
+
+    Parameters:
+    - df (pd.DataFrame): Full square percent identity matrix (index/columns = sequence names)
+    - train_ids (set): Lowercase PDB IDs belonging to the train set
+    - valid_ids (set): Lowercase PDB IDs belonging to the valid set
+
+    Returns:
+    - df_train (pd.DataFrame): Submatrix for train sequences
+    - df_valid (pd.DataFrame): Submatrix for valid sequences
+    - df_train_valid (pd.DataFrame): Submatrix with train seqs as rows and valid seqs as columns
+    """
+
+    def get_pdb_id(seqname):
+        if cdr_only:
+            return seqname.split('|')[0].lower()
+        elif whole_fasta:
+            return seqname.split('_')[0].lower()
+        else:
+            return seqname.split('|')[0].lower()
+
+    # Map sequence name → pdb id
+    seq_to_pdb = {seq: get_pdb_id(seq) for seq in df.index}
+
+    # Select sequence names that belong to each set
+    train_seqs = [seq for seq in df.index if seq_to_pdb[seq] in train_ids]
+    valid_seqs = [seq for seq in df.index if seq_to_pdb[seq] in valid_ids]
+
+    # Extract submatrices
+    df_train = df.loc[train_seqs, train_seqs]
+    df_valid = df.loc[valid_seqs, valid_seqs]
+    df_train_valid = df.loc[train_seqs, valid_seqs]
+
+    return df_train, df_valid, df_train_valid
+
+def plot_train_valid_cross_identity_histograms(df_train, df_valid, df_train_valid, threshold=0.0, bins=20, cdr_only=False, whole_fasta=False):
+    """
+    Plots histograms of percent identity values:
+    - within the train set
+    - within the valid set
+    - between train and valid sets
+
+    Parameters:
+    - df_train (pd.DataFrame): Square identity matrix for train sequences
+    - df_valid (pd.DataFrame): Square identity matrix for valid sequences
+    - df_train_valid (pd.DataFrame): Rectangular matrix of train-vs-valid identities
+    - threshold (float): Minimum identity value to include in plot
+    - bins (int): Number of bins in histogram
+    """
+    def extract_upper_triangle(df):
+        # Mask lower triangle and diagonal
+        mask = np.tril(np.ones(df.shape)).astype(bool)
+        return df.where(~mask).stack()
+
+    # Extract values and apply threshold
+    train_vals = extract_upper_triangle(df_train)
+    valid_vals = extract_upper_triangle(df_valid)
+    cross_vals = df_train_valid.stack()
+
+    print("cross_val1s\n", cross_vals)
+
+
+    train_filtered = train_vals[train_vals > threshold]
+    valid_filtered = valid_vals[valid_vals > threshold]
+    cross_filtered = cross_vals[cross_vals > threshold]
+
+    # Combine into a long-form DataFrame
+    data = pd.DataFrame({
+        'identity': (
+            train_filtered.tolist() +
+            valid_filtered.tolist() +
+            cross_filtered.tolist()
+        ),
+        'set': (
+            ['Training set'] * len(train_filtered) +
+            ['Validation set'] * len(valid_filtered) +
+            ['Cross training–validation set'] * len(cross_filtered)
+        )
+    })
+
+    if cdr_only:
+        title = f'CDR only: Percent Identity Distributions (Threshold > {threshold}%)'
+    elif whole_fasta:
+        title = f'Whole Fasta: Percent Identity Distributions (Threshold > {threshold}%)'
+    else:
+        title = f'Percent Identity Distributions (Threshold > {threshold}%)'
+
+    plt.figure(figsize=(10, 6))
+    sns.histplot(data=data, x='identity', hue='set', bins=bins, element='step', stat='density', common_norm=False, )  
+    plt.xlabel('Percent Identity')
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_all_groups_percent_identity(chain_seq_path, train_ids, valid_ids):
+        """
+        For each subdirectory in heavy_chain_seq_path, finds the .pim file, computes percent identity distributions
+        for train, valid, and train–valid sets, and plots histograms for each group (subdirectory).
+        """
+        all_plot_data = []
+
+        for subdir in os.listdir(chain_seq_path):
+            subdir_path = os.path.join(chain_seq_path, subdir)
+            # print("subdir_path", subdir_path)
+            if os.path.isdir(subdir_path):
+                pim_files = [f for f in os.listdir(subdir_path) if f.endswith('.pim')]
+                if pim_files:
+                    pim_file = pim_files[0]  # Take the first .pim file found
+                    pim_file_path = os.path.join(subdir_path, pim_file)
+                    # print(f"Processing {pim_file_path}")
+                    percent_id_matrix_df = read_identity_matrix(pim_file_path)
+
+                    traindf, validf, df_train_valid = split_identity_matrices(
+                        percent_id_matrix_df, train_ids, valid_ids, cdr_only=True, whole_fasta=False
+                    )
+
+                    def extract_upper_triangle(df):
+                        mask = np.tril(np.ones(df.shape)).astype(bool)
+                        return df.where(~mask).stack()
+
+                    # Extract values and label them
+                    train_vals = extract_upper_triangle(traindf)
+                    valid_vals = extract_upper_triangle(validf)
+                    cross_vals = df_train_valid.stack()
+# 
+                    print("valid_vals.values", valid_vals.values)
+                    print("train_vals.values", train_vals.values)
+
+                    # Store all three sets in a single DataFrame for this subdir
+                    subdir_df = pd.DataFrame({
+                        'identity': np.concatenate([train_vals.values, valid_vals.values, cross_vals.values]),
+                        'set': (['Training set'] * len(train_vals) +
+                                ['Validation set'] * len(valid_vals) +
+                                ['Cross training–validation set'] * len(cross_vals)),
+                        'group': os.path.basename(subdir_path)
+                    })
+
+                    all_plot_data.append(subdir_df)
+
+        ## combine all plots
+        # After the loop, plot all together
+        if all_plot_data:
+            plot_df = pd.concat(all_plot_data, ignore_index=True)
+            max_identity = plot_df[plot_df['set'] == 'Cross training–validation set']['identity'].max()
+            median_identity = int(plot_df[plot_df['set'] == 'Cross training–validation set']['identity'].median())
+
+            print("median_identity",median_identity)
+            print("max_identity",max_identity)
+
+            subdirs = plot_df['group'].unique()
+            n_subdirs = len(subdirs)
+            set_labels = ['Training set', 'Validation set', 'Cross training–validation set']
+            colors = {'Training set': 'tab:blue', 'Validation set': 'tab:orange', 'Cross training–validation set': 'tab:green'}
+
+            if n_subdirs == 1:
+                axes = [axes]
+
+            # Make a single plot with all subdirs, color by set (train, valid, train–valid), facet by group
+            plt.figure(figsize=(10, 6))
+            sns.histplot(
+                data=plot_df,
+                x='identity',
+                hue='set',
+                multiple='dodge',
+                bins=20,
+                element='step',
+                stat='probability',
+                common_norm=False,
+                palette=colors,
+                alpha=0.4
+            )
+            axvline = plt.axvline(median_identity, color='red', linestyle='--')
+            plt.xticks(fontsize=16)
+            plt.yticks(fontsize=16)
+            plt.xlabel('CDR sequence percent identity', fontsize=16)
+            plt.ylabel('Probability', fontsize=16)
+            plt.title('Length matched CDR percent identity Distributions', fontsize=16)
+            # Combine legend handles from histplot and axvline
+            handles, labels = plt.gca().get_legend_handles_labels()
+
+            hist_patches = [Patch(color=colors[set_label], label=set_label, alpha=0.4) for set_label in set_labels]
+            handles = hist_patches + [axvline]
+            labels = set_labels + [f'Median(cross-train-valid): {median_identity:.1f}%']
+            plt.legend(handles=handles, labels=labels, title='Set', fontsize=16, )
+            plt.tight_layout()
+            plt.show()
+
+# ---------------------------
+# Global style (journal-friendly)
+# ---------------------------
+mpl.rcParams.update({
+    "font.family": "Arial",   # or "Times New Roman" depending on journal
+    "font.size": 15,
+    "axes.labelsize": 16,
+    "axes.titlesize": 16,
+    "legend.fontsize": 14,
+    "xtick.labelsize": 14,
+    "ytick.labelsize": 14,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+})
+
+def plot_byloops_groups_percent_identity(chain_seq_path, train_ids, valid_ids, save_path, chain_label, save=False):
+    """
+    For each subdirectory in heavy_chain_seq_path, finds the .pim file, computes percent identity distributions
+    for train, valid, and train–valid sets, and plots histograms for each group (subdirectory).
+    """
+    cdr1_plot_data, cdr2_plot_data, cdr3_plot_data = [], [], []
+
+    for subdir in os.listdir(chain_seq_path):
+        subdir_path = os.path.join(chain_seq_path, subdir)
+        if os.path.isdir(subdir_path):
+            pim_files = [f for f in os.listdir(subdir_path) if f.endswith(".pim")]
+            if pim_files:
+                pim_file_path = os.path.join(subdir_path, pim_files[0])
+                percent_id_matrix_df = read_identity_matrix(pim_file_path)
+
+                traindf, validf, df_train_valid = split_identity_matrices(
+                    percent_id_matrix_df, train_ids, valid_ids, cdr_only=True, whole_fasta=False
+                )
+
+                def extract_upper_triangle(df):
+                    mask = np.tril(np.ones(df.shape)).astype(bool)
+                    return df.where(~mask).stack()
+
+                train_vals = extract_upper_triangle(traindf)
+                valid_vals = extract_upper_triangle(validf)
+                cross_vals = df_train_valid.stack()
+
+                if (cross_vals == 100).any():
+                    print('Rows with 100% identity in cross_vals:')
+                    print(cross_vals[cross_vals == 100])
+                    # print(plot_df[(plot_df["set"] == "Cross training–validation set") & (plot_df["identity"] == 100)])
+
+                
+
+                # print("valid_vals.values", valid_vals.values)
+                # print("train_vals.values", train_vals.values)
+
+                subdir_df = pd.DataFrame({
+                    "identity": np.concatenate([train_vals.values, valid_vals.values, cross_vals.values]),
+                    "set": (
+                        ["Training set"] * len(train_vals)
+                        + ["Validation set"] * len(valid_vals)
+                        + ["Cross training–validation set"] * len(cross_vals)
+                    ),
+                    "group": os.path.basename(subdir_path),
+                })
+
+                if os.path.basename(subdir_path).startswith("h1"):
+                    cdr1_plot_data.append(subdir_df)
+                elif os.path.basename(subdir_path).startswith("h2"):
+                    cdr2_plot_data.append(subdir_df)
+                elif os.path.basename(subdir_path).startswith("h3"):
+                    cdr3_plot_data.append(subdir_df)
+
+    cdr_plot_data = [cdr1_plot_data, cdr2_plot_data, cdr3_plot_data]
+    if chain_label == "heavy":
+        cdr_titles = ["H-1", "H-2", "H-3"]
+    else:
+        cdr_titles = ["L-1", "L-2", "L-3"]
+
+    set_labels = ["Training set", "Validation set", "Cross training–validation set"]
+    colors = {
+        "Training set": "tab:blue",
+        "Validation set": "tab:orange",
+        "Cross training–validation set": "tab:green",
+    }
+
+    fig, axes = plt.subplots(1, 3, figsize=(20, 5), sharey=True, sharex=True)
+
+    for i, (cdr_data, title, ax) in enumerate(zip(cdr_plot_data, cdr_titles, axes)):
+        if not cdr_data:
+            continue
+        plot_df = pd.concat(cdr_data, ignore_index=True)
+        # print(plot_df)
+        cross_vals = plot_df[plot_df["set"] == "Cross training–validation set"]["identity"]
+
+        # Print PDB IDs for cross_vals > 90%
+        # high_identity_indices = plot_df[(plot_df["set"] == "Cross training–validation set") & (plot_df["identity"] > 90)].index
+        # for idx in high_identity_indices:
+        #     group_name = plot_df.loc[idx, "group"]
+        #     print(f"Identity >90% found in group: {group_name}, index: {idx}")
+
+        # if cross_vals.empty:
+        #     pass
+        # else:
+        #     # Print PDB IDs for cross_vals == 100%
+        #     matching_indices = plot_df[(plot_df["set"] == "Cross training–validation set") & (plot_df["identity"] == 100)].index
+        #     for idx in matching_indices:
+        #         seqname = plot_df.loc[idx, "group"]  # group column contains subdir, not seqname
+        #         # If you want to print sequence names, use plot_df.loc[idx] for more info
+        #         print(f"100% identity found in group: {plot_df.loc[idx, 'group']}, index: {idx}")
+
+        median_identity = int(cross_vals.median()) if not cross_vals.empty else 0
+
+        sns.histplot(
+            data=plot_df,
+            x="identity",
+            hue="set",
+            multiple="dodge",
+            bins=20,
+            element="step",
+            stat="probability",
+            common_norm=False,
+            palette=colors,
+            alpha=0.4,
+            ax=ax,
+        )
+
+        # Vertical dashed median line
+        ax.axvline(median_identity, color="black", linestyle="--")
+
+        # Axis labels
+        if i == 1:
+            ax.set_xlabel("Percent CDR sequence identity", fontsize=15)
+        else:
+            ax.set_xlabel("")
+        ax.set_ylabel("Probability", fontsize=15 if i == 0 else 0)
+        ax.set_title(f"{title}", fontsize=15)
+
+        # Median legend (green box, inside each subplot)
+        median_line = Line2D([0], [0], color="black", linestyle="--", linewidth=1,
+                     label=f"Median: {median_identity:.1f}%")
+        legend2 = ax.legend(
+            handles=[median_line],
+            loc="upper right",
+            fontsize=13,
+            frameon=True,
+        )
+        legend2.get_frame().set_facecolor("#ccffcc")  # light green
+        legend2.get_frame().set_edgecolor("green")
+
+        # Histogram legend (only once, for left subplot)
+        if i == 0:
+            hist_patches = [Patch(color=colors[set_label], label=set_label, alpha=0.4) for set_label in set_labels]
+            legend1 = fig.legend(
+                handles=hist_patches,
+                fontsize=13,
+                loc="lower center",
+                bbox_to_anchor=(0.5, -0.07),
+                ncol=3,
+                frameon=False,   # no box
+            )
+            # legend1.get_frame().set_edgecolor("black")
+
+        ax.tick_params(axis="both", labelsize=13)
+
+    plt.subplots_adjust(right=0.85)
+    plt.tight_layout()
+
+    if save:
+        if chain_label == "heavy":
+            save_name = os.path.join(save_path, "heavychain_separate_cdr_identity_histograms.png")
+        else:
+            save_name = os.path.join(save_path, "lightchain_separate_cdr_identity_histograms.png")
+        print(f"Saving histogram plot to {save_name}")
+        plt.savefig(save_name, dpi=300, bbox_inches="tight", transparent=True)
+    else:
+        plt.show()
+
+
+
+if __name__ == "__main__":
+    get_fasta = False
+
+    # Get the script directory and construct paths relative to project root
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    
+    # Dataset paths
+    dataset_base = os.path.join(os.path.expanduser('~'),
+                               'Dataset', 'Finalized_dataset_files', 
+                               'dataset_usedin_model')
+    trainset = os.path.join(dataset_base, 'trainset_examples_dataframe.csv')
+    validset = os.path.join(dataset_base, 'validset_detail.csv')
+
+    train_dataset = gather_dataset_ids(trainset)
+    valid_dataset = gather_dataset_ids(validset)
+
+    train_ids = set(x.lower() for x in train_dataset.keys())
+    valid_ids = set(x.lower() for x in valid_dataset.keys())
+
+    # Gather all pdb fastas for training and validation sets combined
+    # Parse to only keep antibody chains
+    if get_fasta:
+        data_fastas = os.path.join(project_root, 'data', 'dataset_sequences', 
+                                    'dataset_fastas')
+        combined_fasta = os.path.join(data_fastas, 
+                                      'rcsb_training_validation_fasta_combined.fasta')
+        parse_Antibody_fasta(combined_fasta, train_dataset, valid_dataset,
+                             data_fastas, save=True)
+
+    base_path = os.path.join(project_root, 'data', 'dataset_sequences', 
+                             'dataset_fastas', 'clustal_omega_outputs')
+
+    # All CDR loops combined paths
+    heavy_chain_seq_path = os.path.join(base_path, 'AB_heavy_chains_only')
+    light_chain_seq_path = os.path.join(base_path, 'AB_light_chains_only')
+    combined_chain_seq_path = os.path.join(base_path, 'AB_H_L_combined')
+
+    # Parsing all heavy_chain seq lengths
+    # plot_all_groups_percent_identity(heavy_chain_seq_path, train_ids, valid_ids)
+    # plot_all_groups_percent_identity(light_chain_seq_path, train_ids, valid_ids)
+    # plot_all_groups_percent_identity(combined_chain_seq_path, train_ids, valid_ids)
+
+    # Plot by each CDR loop
+    heavy_chain_seq_path = os.path.join(base_path, 'Heavy_chain')
+    plot_byloops_groups_percent_identity(heavy_chain_seq_path, train_ids, valid_ids,
+                                          chain_label="heavy", save_path=base_path,
+                                          save=False)
+    # plot_byloops_groups_percent_identity(heavy_chain_seq_path, train_ids, valid_ids,
+    #                                       chain_label="light", save_path=base_path,
+    #                                       save=False)
+

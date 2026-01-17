@@ -366,12 +366,8 @@ def vol_docked_feature0_ramp(volume_object):
 
 
 
-
-
-
-
-experiment_name = 'SE3Bind_exp29_B_JT_zeroFeatL1_wReg3sum_convZerofeat_plr4_ilr2_refModel_4L3s2v_200ep_asign'
-base_dir = os.path.join(os.path.expanduser('~'),  'AntibodyDocking')
+experiment_name = 'Experiment_NAME'
+base_dir = os.path.join(os.path.expanduser('~'),  'SE3Bind')
 volume_path = os.path.join(base_dir, 'src', 'Figs', 'Feature_volumes', experiment_name)
 working_dir = os.path.join(base_dir, 'src')
 

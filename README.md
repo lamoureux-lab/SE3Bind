@@ -38,10 +38,10 @@ pip install mrcfile
 ## Project Structure
 
 ```
-AntibodyDocking/
+SE3Bind/
 ├── src/                         # Source code
-│   ├── train_BS_T0.py           # Task 0 (Re-Docking) training
-│   ├── train_DC_T1.py           # Task 1 (Binding affinity) training
+│   ├── train_T0.py           # Task 0 (Re-Docking) training
+│   ├── train_T1.py           # Task 1 (Binding affinity) training
 │   ├── TrainerT0.py             # Re-docking model trainer class
 │   ├── TrainerT1.py             # Binding affinity model trainer class
 │   ├── TrainerWrapper.py        # Wrapper for both trainers
@@ -129,8 +129,8 @@ resume_epoch = 1000                                  # Epoch of trained model to
 Run inference using the command-line interface:
 
 ```bash
-cd AntibodyDocking/src/
-python train_DC_T1.py --mode evaluate --config inference_config.txt
+cd SE3Bind/src/
+python train_T1.py --mode evaluate --config inference_config.txt
 ```
 
 **Command-line options:**
@@ -143,10 +143,10 @@ python train_DC_T1.py --mode evaluate --config inference_config.txt
 
 ```bash
 # Evaluate with config file settings
-python train_DC_T1.py --mode evaluate --config inference_config.txt
+python train_T1.py --mode evaluate --config inference_config.txt
 
 # Evaluate with CLI overrides
-python train_DC_T1.py --mode evaluate --config inference_config.txt \
+python train_T1.py --mode evaluate --config inference_config.txt \
     --experiment my_custom_run --testset ../data/datasets/my_data.pkl --epoch 1000
 ```
 
@@ -160,16 +160,10 @@ Predicts the Re-docking pose of antibody-antigen complexes.
 
 **(not recommended without GPU):**
 ```bash
-python train_BS_T0.py
+python train_T0.py
 ```
 
 Configuration: Edit `src/configT0.txt` to set model parameters.
-
-#### Binding Affinity (FI) Prediction  
-Predicts binding free energy (ΔG) from docked complexes.
-```bash
-cd AntibodyDocking/src/
-bash run_DC_T1.sh
 ```
 
 Configuration: Edit `src/configT1.txt` to set model parameters.
@@ -216,9 +210,9 @@ Paths are configured in `configT0.txt` and `configT1.txt`.
 
 #### `Figs/`
 Visualization outputs:
-- **`FI_correlation_plots/`** - ΔF vs ΔG correlation plots
-- **`FI_loss_plots/`** - Training loss curves
-- **`FI_RMSD_distribution_plots/`** - RMSD distributions
+- **`correlation_plots/`** - ΔF vs ΔG correlation plots
+- **`loss_plots/`** - Training loss curves
+- **`RMSD_distribution_plots/`** - RMSD distributions
 - **`Coordinate_RMSD/`** - 3D docking pose visualizations (HTML)
 - **`CorrelationFFTvolumes/`** - Energy grid visualizations
 - **`Feature_volumes/`** - Feature map visualizations (.html and .map files)

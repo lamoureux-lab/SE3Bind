@@ -782,15 +782,15 @@ class TrainerT0:
 
             if not os.path.exists(train_log_name):
                 with open(train_log_name, "w") as fout:
-                    fout.write('IP Training Loss:\n')
+                    fout.write('Training Loss:\n')
                     fout.write(self.log_header)
             if not os.path.exists(valid_log_name):
                 with open(valid_log_name, "w") as fout:
-                    fout.write('IP Validation Loss:\n')
+                    fout.write('Validation Loss:\n')
                     fout.write(self.log_header)
             if not os.path.exists(test_log_name):
                 with open(test_log_name, "w") as fout:
-                    fout.write('IP Testing Loss:\n')
+                    fout.write('Testing Loss:\n')
                     fout.write(self.log_header)
 
             start_epoch = 0

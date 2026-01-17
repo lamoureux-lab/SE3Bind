@@ -1,24 +1,5 @@
 #!/bin/bash
 
-### Inference job for SE3Bind
-### run on cgpu camden
-#sbatch --cluster=amarelc
-#SBATCH --partition=cgpu              # Partition (job queue)
-#SBATCH --nodes=1                   # Number of nodes you require
-#SBATCH --ntasks=1                   # Total # of tasks across all nodes
-#SBATCH --cpus-per-task=12            # Cores per task (>1 if multithread tasks)
-#SBATCH --gres=gpu:1                  # Number of GPUs
-#SBATCH --mem=72G                 # Real memory (RAM) required (MB), 0 is the whole-node memory
-#SBATCH --time=3-00:00:00           # Total run time limit (HH:MM:SS)
-
-### more shared flags
-##mkdir -p slurm_log/;
-#SBATCH --output=slurm_log_shriya/slurm.%N.%j.%x.out
-#SBATCH --error=slurm_log_shriya/slurm.%N.%j.%x.err
-#SBATCH --export=ALL
-
-mkdir -p slurm_log_shriya/
-
 # Add the parent directory of models to the Python path
 export PYTHONPATH="${PYTHONPATH}:../"
 pwd

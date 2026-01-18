@@ -38,26 +38,6 @@ class Docking(nn.Module):
         self.irreps_per_layer = "8x0y+8x1y+4x2y"  # y parity ## 2xF exp5
         self.irreps_final_layer = "3x0y+2x1y" ## 3s 2v
 
-        # # # # # ablation 1s1v DCcent
-        # self.irreps_final_layer = "1x0y+1x1y" ## 1s 1v
-
-        # # # # reference model 2s2v DCcent
-        # self.irreps_final_layer = "2x0y+2x1y" ## 2s 2v
-
-        # # ablation 4s4v DCcent
-        # self.irreps_final_layer = "4x0y+4x1y" ## 4s 4v
-
-        # self.irreps_final_layer = "2x0y+2x1y" ## 2s 2v for q and phi
-
-        # self.irreps_final_layer = "4x0y+4x1y"
-
-        # #Ablation zero feature 2s1v DCcent
-        # self.irreps_final_layer = "2x0y+1x1y" ## 2s 1v 1+2s w/zerofeat
-
-        # ###Ablation zero feature 5s4v DCcent
-
-        # self.irreps_final_layer = "5x0y+4x1y" ## 2s 1v 1+2s w/zerofeat
-
         self.non_linearity = torch.tanh
         self.norm_activation = e3nn.nn.NormActivation(self.irreps_per_layer, self.non_linearity)
         self.num_feats_per_shape = self.calculate_total_features(self.irreps_final_layer)

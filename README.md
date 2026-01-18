@@ -40,8 +40,8 @@ pip install mrcfile
 ```
 SE3Bind/
 ├── src/                         # Source code
-│   ├── train_T0.py           # Task 0 (Re-Docking) training
-│   ├── train_T1.py           # Task 1 (Binding affinity) training
+│   ├── train_T0.py              # Task 0 (Re-Docking) training
+│   ├── train_T1.py              # Task 1 (Binding affinity) training
 │   ├── TrainerT0.py             # Re-docking model trainer class
 │   ├── TrainerT1.py             # Binding affinity model trainer class
 │   ├── TrainerWrapper.py        # Wrapper for both trainers
@@ -230,4 +230,3 @@ Training artifacts:
 - `.th` - PyTorch model checkpoints
 
 ---
-<!-- Citation -->

@@ -43,27 +43,12 @@ class InteractionModel(nn.Module):
 
 
     def forward(self, energy_grid, docked_complex_feat_0, receptor_feat_0, ligand_feat_0):
-        """
-        """
 
-    
         delta_E_0 = torch.sum(docked_complex_feat_0) - torch.sum(receptor_feat_0) - torch.sum(ligand_feat_0)
 
-        # # # sum of abs(feature_0)
-        # delta_E_0 = torch.sum(torch.abs(docked_complex_feat_0)) - torch.sum(torch.abs(receptor_feat_0)) - torch.sum(torch.abs(ligand_feat_0))
+        deltaF = energy_grid[0, 0, 0] + delta_E_0 + self.log_N_0
 
-        deltaF = energy_grid[0, 0, 0] + delta_E_0 + self.log_N_0 #torch.log(self.N_0) ## maybe no log(N_0)?
-
-        return deltaF, self.log_N_0, delta_E_0 #docked_complex_feat_0, receptor_feat_0, ligand_feat_0
-
-        # #############################################################
-        # with torch.no_grad():
-        #     delta_E_0 = 0
-
-        # # # # ## for ablation study without delta_E_0
-        # deltaF = energy_grid[0, 0, 0] + self.log_N_0 #torch.log(self.N_0) ## maybe no log(N_0)?
-
-        # return deltaF, self.log_N_0, delta_E_0
+        return deltaF, self.log_N_0, delta_E_0
 
 if __name__ == '__main__':
     print('works')

@@ -517,7 +517,7 @@ if __name__ == '__main__':
     atom_type_as_channels = True
     normalize_single_atom_kernel = False
     save_pickle = True
-    box_dim = 10
+    box_dim = 75
     resolution_in_angstroms = 2.0
     sigma = 1.0
     device = 'cpu'

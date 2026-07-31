@@ -215,11 +215,6 @@ class TrainerT1:
         self.num_epochs = num_epochs
 
         for epoch in range(start_epoch, num_epochs):
-            checkpoint_dict = {
-                'epoch': epoch,
-                'state_dict': self.sampling_model.state_dict(),
-                'optimizer': self.optimizer.state_dict(),
-            }
             interaction_checkpoint_dict = {
                 'epoch': epoch,
                 'state_dict': self.interaction_model.state_dict(),
@@ -248,10 +243,6 @@ class TrainerT1:
 
                 #### saving model while training
                 if epoch % self.save_freq == 0 and epoch > 0:
-                    model_savefile = self.model_savepath + 'docking_' + self.experiment + str(epoch) + '.th'
-                    self.save_checkpoint(checkpoint_dict, model_savefile, self.sampling_model)
-                    print('saving model ' + model_savefile)
-
                     interaction_savepath = self.model_savepath + self.experiment + str(epoch) + '.th'
                     self.save_checkpoint(interaction_checkpoint_dict, interaction_savepath, self.interaction_model)
                     print('saving interaction model ' + interaction_savepath)
@@ -1101,10 +1092,6 @@ class TrainerT1:
         rmsd_prefix = 'log_RMSDs'
 
         if resume_training:
-            print('Loading docking model at', str(resume_epoch))
-            ckp_path = self.model_savepath + 'docking_' + self.experiment + str(resume_epoch) + '.th'
-            self.sampling_model, self.optimizer, start_epoch = self.load_checkpoint(ckp_path, self.sampling_model,
-                                                                                    self.optimizer)
             print('Loading interaction model at', str(resume_epoch))
             ckp_path = self.model_savepath + self.experiment + str(resume_epoch) + '.th'
             self.interaction_model, self.interaction_optimizer, start_epoch = self.load_checkpoint(

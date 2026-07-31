@@ -30,4 +30,10 @@ pip install tqdm;
 # Install plotly
 echo "Installing plotly..."
 pip install plotly;
+# Install mrcfile
+echo "Installing mrcfile..."
+pip install mrcfile;
+# Install scipy
+echo "Installing scipy..."
+pip install scipy;
 echo "Setup completed."

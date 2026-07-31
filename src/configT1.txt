@@ -1,4 +1,4 @@
-########### Config file read by train_DC_T1.py
+########### Config file read by train_T1.py
 ## Joint training: Re-Docking and Binding affinity config file
 ## Only uncommented lines with assignments are read.
 ## Do not add comments after lines that assign arguments.

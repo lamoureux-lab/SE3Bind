@@ -31,6 +31,7 @@ pip install matplotlib
 pip install tqdm
 pip install plotly
 pip install mrcfile
+pip install scipy
 ```
 
 ---
@@ -80,8 +81,8 @@ filename,antibody_chains,antigen_chains
 ```
 
 - **filename**: Name of your PDB file
-- **antibody_chains**: Comma-separated chain IDs for antibody (e.g., 'H,L')
-- **antigen_chains**: Comma-separated chain IDs for antigen (e.g., 'A')
+- **antibody_chains**: Semicolon-separated chain IDs for antibody (e.g., 'H;L')
+- **antigen_chains**: Semicolon-separated chain IDs for antigen (e.g., 'A')
 
 #### Step 2: Generate Inference Dataset
 
@@ -164,6 +165,12 @@ python train_T0.py
 ```
 
 Configuration: Edit `src/configT0.txt` to set model parameters.
+
+#### Binding affinity task
+Trains the SE3Bind model to predict binding affinity (ΔG) from docked antibody-antigen complexes.
+
+```bash
+python train_T1.py --mode train --config configT1.txt
 ```
 
 Configuration: Edit `src/configT1.txt` to set model parameters.
@@ -171,9 +178,9 @@ Configuration: Edit `src/configT1.txt` to set model parameters.
 ### Model Configuration
 
 Key parameters in config files:
-- `box_dim`: Base grid dimension (default: 50)
-- `padded_dim`: Padded grid dimension (default: 100)
-- `resolution_in_angstroms`: Voxel resolution (default: 2.0)
+- `box_dim`: Base grid dimension (e.g., 75)
+- `padded_dim`: Padded grid dimension (e.g., 150)
+- `resolution_in_angstroms`: Voxel resolution (e.g., 2.0)
 - `learning_rate`: Optimizer learning rate
 - `train_epochs`: Number of training epochs
 - `eval_freq`: Evaluation frequency

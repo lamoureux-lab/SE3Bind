@@ -1,4 +1,4 @@
-########### Config file read by train_DC_T1.py
+########### Config file read by train_T1.py
 ## Inference (Evaluation) mode config file, arguments overwritten by CLI interface, or using run_inference.sh
 ## Inference run using user provided dataset, using SE3Bind model.
 ## Only uncommented lines with assignments are read.
@@ -32,8 +32,8 @@ resume_epoch = 1000
 train_epochs = 1000 
 
 ############### Do not change ###############
-## SE3Bind Re-docking pretrain model: 4L3s2v opposite a_coef
-pretrain_experiment = SE3Dock_200.th
+## SE3Bind Re-docking pretrain model: 4L3s2v
+pretrain_experiment = SE3Dock # checkpoint SE3Dock_200.th 
 pretrain_epoch_loaded = 200
 
 experiment = SE3Bind

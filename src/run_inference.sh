@@ -25,7 +25,7 @@ pwd
 srun -N1 -n1 python train_T1.py \
     --mode evaluate \
     --config inference_config.txt \
-    --testset ../data/test_pdbs/test_2example_inference.pkl
+    --testset ../data/test_2example_inference.pkl
 
 # OPTION 2: Inference with epoch override
 # srun -N1 -n1 python train_T1.py \

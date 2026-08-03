@@ -18,6 +18,7 @@
 
 ## Inference dataset paths
 testset = User_provided_dataset_path
+testset = ../data/test_2example_inference.pkl
 
 train_max_size = 10000
 test_max_size = 1000
@@ -33,7 +34,7 @@ train_epochs = 1000
 
 ############### Do not change ###############
 ## SE3Bind Re-docking pretrain model: 4L3s2v
-pretrain_experiment = SE3Dock # checkpoint SE3Dock_200.th 
+pretrain_experiment = SE3Dock 
 pretrain_epoch_loaded = 200
 
 experiment = SE3Bind

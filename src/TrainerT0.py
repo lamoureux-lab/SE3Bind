@@ -70,13 +70,6 @@ class TrainerT0:
 
         self.so3_angles = so3_angles
         self.R = Rotations(device=self.device, dtype=self.dtype)
-        self.rot_grid_path = '../data/saved_angular_grids/'
-        adj_threshold = 0.95
-        angle_inc = 20
-        param_string = self.rot_grid_path + 'so3_angular_grid_threshold' + str(adj_threshold) + 'angle_inc' + str(
-            angle_inc)
-        pkl_dict = param_string + '.pkl'
-        self.so3_adjacency_dict = self.U.read_pkl(pkl_dict)
 
         self.P = ProcessCoords(dim=self.padded_dim, resolution_in_angstroms=self.resolution_in_angstroms,
                                device=self.device, dtype=self.dtype)

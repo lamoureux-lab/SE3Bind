@@ -18,7 +18,6 @@
 
 ## Inference dataset paths
 testset = User_provided_dataset_path
-testset = ../data/test_2example_inference.pkl
 
 train_max_size = 10000
 test_max_size = 1000

@@ -23,7 +23,7 @@ pwd
 
 # OPTION 1: Basic inference - uses settings from inference_config.txt
 srun -N1 -n1 python train_T1.py \
-    --mode evaluate \
+    --mode evaluate \   
     --config inference_config.txt \
     --testset ../data/test_2example_inference.pkl
 

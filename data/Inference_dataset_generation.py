@@ -196,83 +196,73 @@ def check_bounding_box_overlaps(bb_min_max_1, bb_min_max_2, overlap_bb_min_max, 
     return bounding_boxes_fig
 
 
-def split_pdb_files(pdb_path: str, chain_ids: list):
+def split_pdb_files(pdb_path: str, pdb_filename: str, chain_ids: list):
     """Given a PDB with complex, extract chains for Receptor and Ligand
-    :param pdb_path: str, path to the PDB file or directory
+    :param pdb_path: str, path to the directory containing the PDB file
+    :param pdb_filename: str, name of the single PDB file to split
     :param chain_ids: list, chain IDs for receptor (R) and ligand (L), e.g. ['R', 'L']
         if multiple chains for R or L, use nested lists, e.g. [['R1', 'R2'], ['L1', 'L2']]
     :return: dict, keys are 'receptor' and 'ligand', values are DataFrames with coordinates
     """
-    
+
     parser = PDBParser(PERMISSIVE=1, QUIET=True)
 
-    pdb_files = []
-    print('pdb_path', pdb_path)
-    # Only process original PDB files, exclude already-split files
-    file_names = [f for f in os.listdir(pdb_path) 
-                  if os.path.isfile(os.path.join(pdb_path, f)) 
-                  and f.endswith('.pdb')
-                  and not f.endswith('_antibody.pdb') 
-                  and not f.endswith('_antigen.pdb')]
-    # print('filename', file_names)
-    for file in file_names:
+    file = pdb_filename
+    full_path = os.path.join(pdb_path, file)
+    structure = parser.get_structure("file", full_path)
 
-        full_path = os.path.join(pdb_path, file)
-        structure = parser.get_structure("file", full_path)
+    # Prepare output PDB files
+    antibody_chains = chain_ids[0]
+    antigen_chains = chain_ids[1]
 
-        # Prepare output PDB files
-        antibody_chains = chain_ids[0]
-        antigen_chains = chain_ids[1]
+    print('antibody_chains flat', antibody_chains)
+    print('antigen_chains flat', antigen_chains)
 
-        print('antibody_chains flat', antibody_chains)
-        print('antigen_chains flat', antigen_chains)
+    # Create output file names
+    antibody_outfile = os.path.join(pdb_path, f"{os.path.splitext(file)[0]}_antibody.pdb")
+    antigen_outfile = os.path.join(pdb_path, f"{os.path.splitext(file)[0]}_antigen.pdb")
 
-        # Create output file names
-        antibody_outfile = os.path.join(pdb_path, f"{os.path.splitext(file)[0]}_antibody.pdb")
-        antigen_outfile = os.path.join(pdb_path, f"{os.path.splitext(file)[0]}_antigen.pdb")
+    # Skip writing if output files already exist
+    if os.path.exists(antibody_outfile):
+        print(f"Antibody output file {antibody_outfile} already exists, skipping.")
+        return
+    if os.path.exists(antigen_outfile):
+        print(f"Antigen output file {antigen_outfile} already exists, skipping.")
+        return
 
-        # Skip writing if output files already exist
-        if os.path.exists(antibody_outfile):
-            print(f"Antibody output file {antibody_outfile} already exists, skipping.")
-            continue
-        if os.path.exists(antigen_outfile):
-            print(f"Antigen output file {antigen_outfile} already exists, skipping.")
-            continue
+    class ChainSelect(Select):
+        def __init__(self, chains):
+            self.chains = set([c.upper() for c in chains])
+        def accept_chain(self, chain):
+            return chain.id.upper() in self.chains
 
-        class ChainSelect(Select):
-            def __init__(self, chains):
-                self.chains = set([c.upper() for c in chains])
-            def accept_chain(self, chain):
-                return chain.id.upper() in self.chains
+    io = PDBIO()
+    # Save antibody chains
+    io.set_structure(structure)
+    # Save each antibody chain separately
+    # Combine all antibody chains and save to a single file
+    # Flatten antibody_chains if nested and split comma-separated chains
+    combined_chains = []
+    for chain_group in antibody_chains:
+        if isinstance(chain_group, str):
+            combined_chains.extend([c.strip() for c in chain_group.split(',')])
+        else:
+            for chain in chain_group:
+                combined_chains.extend([c.strip() for c in chain.split(',')])
+    print('combined antibody chains', combined_chains)
+    io.set_structure(structure)
+    io.save(antibody_outfile, select=ChainSelect(combined_chains))
+    print(f"Saved combined antibody chains to {antibody_outfile}")
 
-        io = PDBIO()
-        # Save antibody chains
-        io.set_structure(structure)
-        # Save each antibody chain separately
-        # Combine all antibody chains and save to a single file
-        combined_chains = []
-        # Flatten antibody_chains if nested and split comma-separated chains
-        combined_chains = []
-        for chain_group in antibody_chains:
-            if isinstance(chain_group, str):
-                combined_chains.extend([c.strip() for c in chain_group.split(',')])
-            else:
-                for chain in chain_group:
-                    combined_chains.extend([c.strip() for c in chain.split(',')])
-        print('combined antibody chains', combined_chains)
-        io.set_structure(structure)
-        io.save(antibody_outfile, select=ChainSelect(combined_chains))
-        print(f"Saved combined antibody chains to {antibody_outfile}")
+    # Save antigen chains
+    combined_antigen_chains = []
+    for chain in antigen_chains:
+        combined_antigen_chains.extend(chain.split(','))
+    print('combined antigen chains', combined_antigen_chains)
+    io.set_structure(structure)
+    io.save(antigen_outfile, select=ChainSelect(combined_antigen_chains))
+    print(f"Saved combined antigen chains to {antigen_outfile}")
 
-        # Save antigen chains
-        combined_antigen_chains = []
-        for chain in antigen_chains:
-            combined_antigen_chains.extend(chain.split(','))
-        print('combined antigen chains', combined_antigen_chains)
-        io.set_structure(structure)
-        io.save(antigen_outfile, select=ChainSelect(combined_antigen_chains))
-        print(f"Saved combined antigen chains to {antigen_outfile}")
-    
 
 def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset):
     """
@@ -569,7 +559,7 @@ if __name__ == '__main__':
         print(f"  Antigen chains: {antigen_chains}")
         
         # Step 1: Split PDB file into antibody and antigen
-        split_pdb_files(pdb_directory, chain_ids=[antibody_chains, antigen_chains])
+        split_pdb_files(pdb_directory, pdb_filename, chain_ids=[antibody_chains, antigen_chains])
     
     # Step 2: Generate dataset from all split PDB files
     print(f"\nGenerating dataset from split PDB files in: {pdb_directory}")

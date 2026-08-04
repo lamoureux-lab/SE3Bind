@@ -252,7 +252,7 @@ Examples:
 
 
     #### Plot loss and RMSDs from current experiment
-    show = True
+    show = False   
     plot_epoch = train_epochs
     Plotter = PlotterT1(experiment=experiment,
                         logfile_savepath='Log/losses/' + experiment + '/')

@@ -122,9 +122,9 @@ This will:
 Configure your inference settings in `src/inference_config.txt`:
 
 ```bash
-# Key settings to modify:
+Key settings to modify:
+# Update the path to YOUR geneated dataset pklfile inside `src/inference_config.txt`
 testset = ../data/datasets/inference_dataset.pkl    # Your generated dataset
-resume_epoch = 1000                                  # Epoch of trained model to load
 ```
 
 Run inference using the command-line interface:

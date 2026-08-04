@@ -1193,19 +1193,19 @@ class TrainerT1:
         if self.training_case == 'A':
             print('Training expA (docking model frozen)')
             self.param_to_freeze = 'all'
-            self.sampling_model.load_state_dict(torch.load(self.path_pretrain)['state_dict'])
+            self.sampling_model.load_state_dict(torch.load(self.path_pretrain, map_location=self.device)['state_dict'])
         # CaseB: train with docking model unfrozen
         if self.training_case == 'B':
             print('Training expB (docking model unfrozen)')
             self.param_to_freeze = None
-            print("testing pre_trainModle load::", type(torch.load(self.path_pretrain)['state_dict']))
-            print("type", type(torch.load(self.path_pretrain)['state_dict']))
-            self.sampling_model.load_state_dict(torch.load(self.path_pretrain)['state_dict'])
+            print("testing pre_trainModle load::", type(torch.load(self.path_pretrain, map_location=self.device)['state_dict']))
+            print("type", type(torch.load(self.path_pretrain, map_location=self.device)['state_dict']))
+            self.sampling_model.load_state_dict(torch.load(self.path_pretrain, map_location=self.device)['state_dict'])
         # CaseC: train with docking model CNN frozen
         if self.training_case == 'C':
             print('Training expC ("a" scoring coeffs unfrozen)')
             self.param_to_freeze = 'conv'  #
-            self.sampling_model.load_state_dict(torch.load(self.path_pretrain)['state_dict'])
+            self.sampling_model.load_state_dict(torch.load(self.path_pretrain, map_location=self.device)['state_dict'])
         # Case scratch: train everything from scratch
         if self.training_case == 'scratch':
             print('Training from scratch')

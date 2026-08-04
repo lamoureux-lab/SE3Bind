@@ -148,7 +148,7 @@ python train_T1.py --mode evaluate --config inference_config.txt
 
 # Evaluate with CLI overrides
 python train_T1.py --mode evaluate --config inference_config.txt \
-    --experiment my_custom_run --testset ../data/datasets/my_data.pkl --epoch 1000
+    --experiment SE3Bind --testset ../data/datasets/my_data.pkl --epoch 1000
 ```
 
 The predictions will be saved in `Log/losses/<experiment_name>/`. In inference mode, `deltaF` is the model's predicted binding affinity score (no ground-truth ΔG is available or used).

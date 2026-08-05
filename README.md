@@ -77,7 +77,7 @@ Create a CSV file (e.g., `mappings_example.csv`) with your PDB files and chain m
 filename,antibody_chains,antigen_chains
 5mev.pdb,H;L,A
 3iu3.pdb,A;B,K
-1s78.pdb,H;L,A;B
+1S78.pdb,C;D,A
 ```
 
 - **filename**: Name of your PDB file

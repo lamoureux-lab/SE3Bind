@@ -304,7 +304,7 @@ class ProcessCoords:
     def combine_coords(self, dict_original_coords_antibody, dict_original_coords_antigen):
         combined_dict = {}
         for key in dict_original_coords_antibody:
-            combined_key = pd.concat([dict_original_coords_antibody[key],dict_original_coords_antigen[key]], keys=["x", "y", "z"])
+            combined_key = pd.concat([dict_original_coords_antibody[key], dict_original_coords_antigen[key]], ignore_index=True)
             combined_dict[key] = combined_key
 
         return combined_dict

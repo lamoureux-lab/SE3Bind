@@ -264,13 +264,15 @@ def split_pdb_files(pdb_path: str, pdb_filename: str, chain_ids: list):
     print(f"Saved combined antigen chains to {antigen_outfile}")
 
 
-def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset):
+def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset, allowed_base_names=None):
     """
     Generate dataset from split PDB files (antibody and antigen).
-    
+
     :param split_pdb_files_path: Path to directory containing split antibody and antigen PDB files
     :param data_savepath: Path to save the generated dataset pickle file
     :param save_name_trainset: Name of the output pickle file
+    :param allowed_base_names: If provided, only base names (PDB filename without extension) in this
+        set are included, so stray split files left over from other runs are ignored.
     """
     dataset = []
     deltaG_values = []
@@ -284,6 +286,10 @@ def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset):
     # Group antibody and antigen files by base name
     antibody_files = [f for f in file_names if f.endswith('_antibody.pdb')]
     antigen_files = [f for f in file_names if f.endswith('_antigen.pdb')]
+
+    if allowed_base_names is not None:
+        antibody_files = [f for f in antibody_files if f.replace('_antibody.pdb', '') in allowed_base_names]
+        antigen_files = [f for f in antigen_files if f.replace('_antigen.pdb', '') in allowed_base_names]
 
     # Match antibody and antigen files by base name
     for antibody in antibody_files:
@@ -331,18 +337,6 @@ def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset):
         # identity_4x4_transformation_matrix = U.build_4x4_transform_mat()
         identity_4x4_transformation_matrix = torch.eye(4, 4)
 
-        # ### uncomment to visualize volumes: 
-        # P.plot_complex_volume(list_of_volumes=[AB_volume_transformed, AG_volume_transformed, 
-        #                                        docked_complex_volume],
-        #                               # colorscale=['Blackbody', 'Spectral'],
-        #                               opacities=[0.2, 0.2],
-        #                               surface_counts=[3, 3],
-        #                               midpoints=[0.0, 0.0, 0.0, 0.0],
-        #                               # isomins=[0.01, 0.01],
-        #                               save_fig=False,
-        #                               show=True,
-        #                               )
-
         if docked_complex:
                 print("Generating docked complex volume")
                 docked_complex_coords = P.combine_coords(AB_coords_transformed, AG_coords_transformed)
@@ -355,6 +349,20 @@ def generate_dataset(split_pdb_files_path, data_savepath, save_name_trainset):
                         docked_complex_atom_type_dict)
                     docked_complex_volumes.append(docked_complex_single_atom_volume_antibody)
                 docked_complex_volumes = np.stack(docked_complex_volumes)
+
+        
+        # # ### uncomment to visualize volumes: 
+        # P.plot_complex_volume(list_of_volumes=[AB_volume_transformed, AG_volume_transformed, 
+        #                                        docked_complex_volume],
+        #                               # colorscale=['Blackbody', 'Spectral'],
+        #                               opacities=[0.2, 0.2],
+        #                               surface_counts=[3, 3],
+        #                               midpoints=[0.0, 0.0, 0.0, 0.0],
+        #                               # isomins=[0.01, 0.01],
+        #                               save_fig=False,
+        #                               show=True,
+        #                               )
+
     
         if atom_type_as_channels:
             # Add standardized total volume as original channel
@@ -542,28 +550,30 @@ if __name__ == '__main__':
     print(df_mappings.head())
     
     # Process each PDB file in the CSV
+    allowed_base_names = set()
     for idx, row in df_mappings.iterrows():
         pdb_filename = row['filename']
         # Split by semicolon (;) since chains are separated by semicolons in the CSV
         antibody_chains = [c.strip() for c in str(row['antibody_chains']).split(';')]
         antigen_chains = [c.strip() for c in str(row['antigen_chains']).split(';')]
-        
+
         pdb_file_path = os.path.join(pdb_directory, pdb_filename)
-        
+
         if not os.path.exists(pdb_file_path):
             print(f"Warning: PDB file not found: {pdb_file_path}, skipping...")
             continue
-        
+
         print(f"\nProcessing {pdb_filename}")
         print(f"  Antibody chains: {antibody_chains}")
         print(f"  Antigen chains: {antigen_chains}")
-        
+
         # Step 1: Split PDB file into antibody and antigen
         split_pdb_files(pdb_directory, pdb_filename, chain_ids=[antibody_chains, antigen_chains])
-    
-    # Step 2: Generate dataset from all split PDB files
+        allowed_base_names.add(os.path.splitext(pdb_filename)[0])
+
+    # Step 2: Generate dataset only from the PDBs listed in the CSV
     print(f"\nGenerating dataset from split PDB files in: {pdb_directory}")
-    dataset = generate_dataset(pdb_directory, output_path, output_name)
+    dataset = generate_dataset(pdb_directory, output_path, output_name, allowed_base_names=allowed_base_names)
     
     print(f"\n{'='*80}")
     print(f"Dataset generation complete!")
